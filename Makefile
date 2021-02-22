@@ -27,14 +27,14 @@ replace:
 	sudo mv original.so /lib/x86_64-linux-gnu/libMyFuncs.so
 
 remove:
-	rm *.so *.o
+	rm *.so
 
 submit:
-	sudo mv libMyFuncs.so /lib/x86_64-linux-gnu/libMyFuncs.so | rm original.so 
+	sudo mv libMyFuncs.so /lib/x86_64-linux-gnu/libMyFuncs.so || rm original.so 
 
 mv_hdr: *.h
 	for file in $^;						\
 	do									\
 	sudo cp $$file /usr/include/$$file;	\
 	done				
-
+	

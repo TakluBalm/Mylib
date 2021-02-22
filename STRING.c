@@ -23,7 +23,6 @@ string editstr(string str, int j, int show){
             case (EOF):{str.start->value = 'L'; goto end;}
             case (127):{                             		// ASCII for Backspace
                 if (current == str.start) {str.start->value = 'R'; goto end;}
-                printf("\b \b");
                 current->next->prev = current->prev;
                 current->prev->next = current->next;
                 mediator = current; current = current->prev; 
@@ -31,16 +30,6 @@ string editstr(string str, int j, int show){
                 i--;j--;
                 insert(str, show, i, j);
                 break;
-            } 
-            case ('\t'):{
-            	for (int k = 0; k < 4; k++){
-                	mediator = (node*) malloc(sizeof(node));
-                	mediator->next = current->next; mediator->prev = current;
-                	current = current->next = (current->next)->prev = mediator;
-                	current->value = ' ';
-                	insert(str, show, i, j);
-                	i++;j++;
-            	}
             }
             case (27):{		                               // 27 is ASCII for ESC character
                 temp = getch();
@@ -49,15 +38,15 @@ string editstr(string str, int j, int show){
                         case (67):{
                             if (current->next == str.end) continue;
                             else current = current->next;
-                            printf("\033[C");
                             j++;
+                            insert(str, 1, i , j);
                             continue;
                         }
                         case (68):{
                             if (current == str.start) continue;
                             else current = current->prev;
-                            printf("\033[D");
                             j--;
+                            insert(str, 1, i , j);
                             continue;
                         }
                         case (65):
@@ -78,6 +67,7 @@ string editstr(string str, int j, int show){
                             }
                         }
                     }
+                    break;
                 }
                 if (temp == 27){
                     str.start->value = 'L';
@@ -92,8 +82,8 @@ string editstr(string str, int j, int show){
                 mediator->next = current->next; mediator->prev = current;
                 current = current->next = (current->next)->prev = mediator;
                 current->value = temp;
+                i++; j++;
                 insert(str, show, i, j);
-                i++;j++;
             }
         }
         continue;
@@ -107,23 +97,29 @@ string editstr(string str, int j, int show){
 
 string getstr(char *msg, int show){        // SHOW: 0->Password 1->Normal text  2->No output on screen
     printf("%s", msg);
-    string str = initstr();
+    int last_new_line=-1, msg_len;
+    for(msg_len = 0; msg[msg_len] != '\0'; msg_len++) {if (msg[msg_len] == '\n') last_new_line=msg_len;}
+    char* new_msg = msg + last_new_line + 1;
+    string str = to_string(new_msg);
     node *current = str.start, *mediator = NULL;
-    int i=0, j = 0;
     str = editstr(str, str.length, show);
-    return str;
+    string str_final = breakstr(&str, msg_len);
+    freestr(str);
+    return str_final;
 }
 
 //     -----------------------------insert()-----------------------------
 
 void insert(string str, int show, int i, int j){
     if (show == 1){
-        for (int k = 0; k <(i-j +1); k++) printf("\033[C");
-        for (int k = 0; k < (i+1); k++) printf("\b \b");
+        printf("\r\033[K");
+        str.end->value = '\0';
+        strprint(str); printf("\r");
+        string residue = breakstr(&str, j);
         str.end->value = '\0';
         strprint(str);
+        str = concatnate(str, residue);
         str.end->value = '\n';
-        for (int k = 0; k < (i-j); k++) printf("\b"); // \b char moves the cursor back one space
     }
     else if (show == 0){
         for (int k = 0; k < (i-j); k++) printf("\033[C");
@@ -190,14 +186,23 @@ string concatnate(string str1, string str2){
 //      ------------------------------------------breakstr()--------------------------------------
 
 string breakstr(string *str, int j){
-    string str2; str2.end = str->end; str2.length = str->length - j; str2.cursor = 0;
-    node *current = str->start, *start = (node*) malloc(sizeof(node)), *end = (node*) malloc(sizeof(node));
+    string str2; str2.end = str->end; str2.length = str->length - j;
+    node *current = str->start, *start = malloc(sizeof(node)), *end = malloc(sizeof(node));
+    int residue_j, main_j;
+    if (str->cursor <= j) {
+        residue_j = 0;
+        main_j = str->cursor; 
+    } else {
+        residue_j = str->cursor - j;
+        main_j = j;
+    }
     for (int k = 0; k < j; k++) current = current->next;
     end->prev = current; end->next = NULL; start->next = current->next; start->prev = NULL;
     end->value = '\n'; start->value = '\0';
     end->prev->next = end; start->next->prev = start;
     str->end = end; str->cursor = str->length = j;
-    str2.start = start; 
+    str2.start = start;
+    str->cursor = main_j; str2.cursor = residue_j; 
     return str2;
 }
 

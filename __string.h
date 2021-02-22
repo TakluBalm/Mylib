@@ -4,17 +4,20 @@
 
 //      Custom structs
 
-typedef struct node{
-    struct node *next;
-    struct node *prev;
+typedef struct node node;
+typedef struct string string;
+
+struct node{
+    node *next;
+    node *prev;
     int value;
-}node;
-typedef struct string{
+};
+struct string{
     node *start;
     node *end;
     unsigned int length;
     unsigned int cursor;
-}string;
+};
 
 string initstr();                           	    	// Initialises the start, end, length and cursor fields of string datatype and returns the initialised string
 string getstr(char *msg, int show);         		    // Initialises the string and stores the input from the user

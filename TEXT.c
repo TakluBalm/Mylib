@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-
 //  --------------------------------------  editxt()  ------------------------------------------------
 
 text editxt(text txt, int j, int show){
