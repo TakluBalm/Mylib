@@ -1,11 +1,11 @@
 #include "__string.h"
-#include "__io.h"
+#include <__io.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 
-//           --------------------------editstr()-----------------------
+//      -----------------------------------------editstr()------------------
 
 string editstr(string str, int j, int show){
     int i = str.length;
@@ -31,9 +31,9 @@ string editstr(string str, int j, int show){
                 insert(str, show, i, j);
                 break;
             }
-            case (27):{		                               // 27 is ASCII for ESC character
-                temp = getch();
-                if (temp == 91){       	                       // 91 is ASCII for [ character
+            case (27):{	    	                                        // 27 is ASCII for ESC character
+                temp = getch();                                         
+                if (temp == 91){           	                            // 91 is ASCII for [ character
                     switch(temp = getch()){
                         case (67):{
                             if (current->next == str.end) continue;
@@ -57,11 +57,9 @@ string editstr(string str, int j, int show){
                         case(51):{
                             temp = getch();
                             if (temp == 126){
-                                current = current->next; printf("\033[C\b \b");
-                                current->next->prev = current->prev;
-                                current->prev->next = current->next;
-                                mediator = current; current = current->prev; 
-                                free(mediator);i--;
+                                current->next = current->next->next;
+                                free(current->next->prev);
+                                current->next->prev = current;i--;
                                 insert(str, show, i, j);
                                 break;
                             }
@@ -86,49 +84,43 @@ string editstr(string str, int j, int show){
                 insert(str, show, i, j);
             }
         }
-        continue;
     }
     end:
     str.length = i; str.cursor = j;
     return str;    
 }
 
-//           --------------------------getstr()--------------------------
+//      -----------------------------------------getstr()-------------------
 
-string getstr(char *msg, int show){        // SHOW: 0->Password 1->Normal text  2->No output on screen
+string getstr(char *msg, int show, int mode){
     printf("%s", msg);
-    int last_new_line=-1, msg_len;
-    for(msg_len = 0; msg[msg_len] != '\0'; msg_len++) {if (msg[msg_len] == '\n') last_new_line=msg_len;}
-    char* new_msg = msg + last_new_line + 1;
-    string str = to_string(new_msg);
-    node *current = str.start, *mediator = NULL;
-    str = editstr(str, str.length, show);
-    string str_final = breakstr(&str, msg_len);
-    freestr(str);
-    return str_final;
+    int last_new_line=-1, padding = 0;
+    for(int k = 0; msg[k] != '\0'; k++) {if (msg[k] == '\n') padding=0; padding++;}
+    string str = initstr(); str.padding = padding;
+    switch(mode){
+    case(IT_SINGLE):{
+        do    str = editstr(str, str.cursor, show);
+        while(str.start->value != '\0' && str.start->value != 'N');
+        return str;
+    }
+    case(IT_MULTI):{
+            //  TO-DO
+    }}
 }
 
-//     -----------------------------insert()-----------------------------
+//      -----------------------------------------insert()-------------------
 
 void insert(string str, int show, int i, int j){
-    if (show == 1){
-        printf("\r\033[K");
-        str.end->value = '\0';
-        strprint(str); printf("\r");
-        string residue = breakstr(&str, j);
-        str.end->value = '\0';
-        strprint(str);
-        str = concatnate(str, residue);
-        str.end->value = '\n';
-    }
-    else if (show == 0){
-        for (int k = 0; k < (i-j); k++) printf("\033[C");
-        printf("*");
-        for (int k = 0; k < (i-j); k++) printf("\b");
-    }
+    printf("\r\033[%dC\033[K", str.padding);
+    strprint(str, show); printf("\033[%dC\033[A", str.padding);
+    string residue = breakstr(&str, j);
+    str.end->value = '\0';
+    strprint(str, show);
+    str = concatnate(str, residue);
+    str.end->value = '\n';
 }
 
-//        ----------------------------freestr()-----------------------------
+//      -----------------------------------------freestr()------------------
 
 void freestr(string str){
     node *current = str.start, *next = str.start->next;
@@ -143,18 +135,20 @@ void freestr(string str){
     }
 }
 
-//           --------------------------strprint()-----------------------
+//      -----------------------------------------strprint()-----------------
 
-void strprint(string str){
+void strprint(string str, int show){
     node *current = str.start->next;  
     while(current != str.end){
-        printf("%c", current->value);
+        if (show == OT_NORM)        printf("%c", current->value);
+        else if (show == OT_PSWD)   printf("*");
+        else if (show == OT_NULL)   return;
         current = current->next;
     }
     if (current->value == '\n') printf("%c", current->value);
 }
 
-//      ------------------------------------------initstr()--------------------------------------
+//      -----------------------------------------initstr()------------------
 
 string initstr(){
     string str;
@@ -167,11 +161,11 @@ string initstr(){
     str.start->next = str.end; str.end->prev = str.start;
     str.start->prev = str.end->next = NULL; 
     str.start->value = '\0'; str.end->value = '\n';
-    str.length = 0; str.cursor = 0;
+    str.length = 0; str.cursor = 0; str.padding = 0;
     return str;
 }
 
-//      -----------------------------------------concatnate()------------------------------------
+//      -----------------------------------------concatnate()---------------
 
 string concatnate(string str1, string str2){
     string str;
@@ -183,7 +177,7 @@ string concatnate(string str1, string str2){
     return str; 
 }
 
-//      ------------------------------------------breakstr()--------------------------------------
+//      -----------------------------------------breakstr()-----------------
 
 string breakstr(string *str, int j){
     string str2; str2.end = str->end; str2.length = str->length - j;
@@ -206,7 +200,7 @@ string breakstr(string *str, int j){
     return str2;
 }
 
-//      -----------------------------------------to_char()-----------------------------------------
+//      -----------------------------------------to_char()------------------
 
 char* to_char(string str){
     char* sr = malloc(str.length + 1);
@@ -218,6 +212,8 @@ char* to_char(string str){
     sr[len] = '\0';
     return sr;
 }
+
+//      -----------------------------------------to_string()----------------
 
 string to_string(char *str){
     char temp = str[0]; int i = 0;
